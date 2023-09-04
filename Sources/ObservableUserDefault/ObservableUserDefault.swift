@@ -1,4 +1,4 @@
-/// An attached macro for properties in `@Observable` classes that provides accessor blocks with getters and setters that read and store the properties in `UserDefaults`.
+/// An attached macro for properties in `@Observable` classes that provides accessor blocks with getters and setters that read and write the properties in `UserDefaults`.
 /// Applying the macro to anything other than a `var` without an accessor block will result in a compile time error.
 ///
 /// Applying `@ObservableUserDefault` to a `@ObservationIgnored var` inside an `@Observable` class
