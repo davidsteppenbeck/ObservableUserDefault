@@ -1,8 +1,15 @@
+/*
+import SwiftUI
 import ObservableUserDefault
 
-let a = 17
-let b = 25
+@Observable
+class Person {
+    @ObservableUserDefault
+    @ObservationIgnored
+    var name: String
+}
 
-let (result, code) = #stringify(a + b)
-
-print("The value \(result) was produced by the code \"\(code)\"")
+extension UserDefaults {
+    static var name: String = "John Appleseed"
+}
+*/

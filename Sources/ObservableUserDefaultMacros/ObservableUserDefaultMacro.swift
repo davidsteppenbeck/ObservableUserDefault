@@ -3,31 +3,77 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-/// Implementation of the `stringify` macro, which takes an expression
-/// of any type and produces a tuple containing the value of that expression
-/// and the source code that produced the value. For example
-///
-///     #stringify(x + y)
-///
-///  will expand to
-///
-///     (x + y, "x + y")
-public struct StringifyMacro: ExpressionMacro {
+public struct ObservableUserDefaultMacro: AccessorMacro {
+    
     public static func expansion(
-        of node: some FreestandingMacroExpansionSyntax,
+        of node: AttributeSyntax,
+        providingAccessorsOf declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
-    ) -> ExprSyntax {
-        guard let argument = node.argumentList.first?.expression else {
-            fatalError("compiler bug: the macro does not have any arguments")
+    ) throws -> [AccessorDeclSyntax] {
+        // Ensure the macro can only be attached to variable properties.
+        guard let varDecl = declaration.as(VariableDeclSyntax.self), varDecl.bindingSpecifier.text == "var" else {
+            throw ObservableUserDefaultError.notVariableProperty
         }
+        
+        // Ensure the variable is defines a single property declaration, for example,
+        // `var name: String` and not multiple declarations such as `var name, address: String`.
+        guard varDecl.bindings.count == 1, let binding = varDecl.bindings.first else {
+            throw ObservableUserDefaultError.propertyMustContainOnlyOneBinding
+        }
+        
+        // Ensure there is no computed property block attached to the variable already.
+        guard binding.accessorBlock == nil else {
+            throw ObservableUserDefaultError.propertyMustHaveNoAccessorBlock
+        }
+        
+        // For simple variable declarations, the binding pattern is `IdentifierPatternSyntax`,
+        // which defines the name of a single variable.
+        guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+            throw ObservableUserDefaultError.propertyMustUseSimplePatternSyntax
+        }
+        
+        return [
+        #"""
+        get {
+            access(keyPath: \.\#(pattern.identifier))
+            return UserDefaults.\#(pattern.identifier)
+        }
+        """#,
+        #"""
+        set {
+            withMutation(keyPath: \.\#(pattern.identifier)) {
+                UserDefaults.\#(pattern.identifier) = newValue
+            }
+        }
+        """#
+        ]
+    }
+    
+}
 
-        return "(\(argument), \(literal: argument.description))"
+enum ObservableUserDefaultError: Error, CustomStringConvertible {
+    case notVariableProperty
+    case propertyMustContainOnlyOneBinding
+    case propertyMustHaveNoAccessorBlock
+    case propertyMustUseSimplePatternSyntax
+    
+    var description: String {
+        switch self {
+        case .notVariableProperty:
+            return "'@ObservableUserDefault' can only be applied to variables"
+        case .propertyMustContainOnlyOneBinding:
+            return "'@ObservableUserDefault' cannot be applied to multiple variable bindings"
+        case .propertyMustHaveNoAccessorBlock:
+            return "'@ObservableUserDefault' cannot be applied to computed properties"
+        case .propertyMustUseSimplePatternSyntax:
+            return "'@ObservableUserDefault' can only be applied to a variables using simple declaration syntax, for example, 'var name: String'"
+        }
     }
 }
 
 @main
 struct ObservableUserDefaultPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        StringifyMacro.self,
+        ObservableUserDefaultMacro.self
     ]
 }
