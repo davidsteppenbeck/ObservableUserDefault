@@ -1,6 +1,6 @@
 # ObservableUserDefault
 
-ObservableUserDefault is a Swift macro for properties in `@Observable` classes that provides accessor blocks with getters and setters that read and write the properties in `UserDefaults`.
+`ObservableUserDefault` is a Swift macro for properties in `@Observable` classes that provides accessor blocks with getters and setters that read and write the properties in `UserDefaults`.
 
 ## Usage
 
