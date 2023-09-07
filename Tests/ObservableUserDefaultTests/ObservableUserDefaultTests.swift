@@ -45,7 +45,39 @@ final class ObservableUserDefaultTests: XCTestCase {
         #endif
     }
     
-    func testObservableUserDefaultOnConstant() throws {
+    func testObservableUserDefaultWithArgument() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NUMBER_STORAGE_KEY", defaultValue: 1000, store: .standard))
+                var number: Int
+            }
+            """#,
+            expandedSource:
+            #"""
+            class StorageModel {
+                var number: Int {
+                    get {
+                        access(keyPath: \.number)
+                        return UserDefaults.standard.value(forKey: "NUMBER_STORAGE_KEY") as? Int ?? 1000
+                    }
+                    set {
+                        withMutation(keyPath: \.number) {
+                            UserDefaults.standard.set(newValue, forKey: "NUMBER_STORAGE_KEY")
+                        }
+                    }
+                }
+            }
+            """#,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithConstant() throws {
         #if canImport(ObservableUserDefaultMacros)
         assertMacroExpansion(
             """
@@ -62,6 +94,60 @@ final class ObservableUserDefaultTests: XCTestCase {
             """,
             diagnostics: [
                 DiagnosticSpec(message: "'@ObservableUserDefault' can only be applied to variables", line: 2, column: 5)
+            ],
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithComputedProperty() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            """
+            class StorageModel {
+                @ObservableUserDefault
+                var name: String {
+                    return "John Appleseed"
+                }
+            }
+            """,
+            expandedSource:
+            """
+            class StorageModel {
+                var name: String {
+                    return "John Appleseed"
+                }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "'@ObservableUserDefault' cannot be applied to computed properties", line: 2, column: 5)
+            ],
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithStoredProperty() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            """
+            class StorageModel {
+                @ObservableUserDefault
+                var name: String = "John Appleseed"
+            }
+            """,
+            expandedSource:
+            """
+            class StorageModel {
+                var name: String = "John Appleseed"
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "'@ObservableUserDefault' cannot be applied to stored properties", line: 2, column: 5)
             ],
             macros: testMacros
         )

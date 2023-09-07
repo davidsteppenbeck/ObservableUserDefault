@@ -26,23 +26,66 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
             throw ObservableUserDefaultError.propertyMustHaveNoAccessorBlock
         }
         
+        // Ensure there is no initial value assigned to the variable.
+        guard binding.initializer == nil else {
+            throw ObservableUserDefaultError.propertyMustHaveNoInitializer
+        }
+        
         // For simple variable declarations, the binding pattern is `IdentifierPatternSyntax`,
         // which defines the name of a single variable.
         guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
             throw ObservableUserDefaultError.propertyMustUseSimplePatternSyntax
         }
         
+        // Check if there is an explicit argument provided to the macro.
+        // If so, extract the key, defaultValue, and store to use, and provide stored properties from `UserDefaults` that use the values extracted from the macro argument.
+        // If not, use a static property on `UserDefaults` with the same name as the property.
+        guard let arguments = node.arguments else {
+            return [
+            #"""
+            get {
+                access(keyPath: \.\#(pattern.identifier))
+                return UserDefaults.\#(pattern.identifier)
+            }
+            """#,
+            #"""
+            set {
+                withMutation(keyPath: \.\#(pattern.identifier)) {
+                    UserDefaults.\#(pattern.identifier) = newValue
+                }
+            }
+            """#
+            ]
+        }
+        
+        // Ensure the macro has one and only one argument.
+        guard let exprList = arguments.as(LabeledExprListSyntax.self), exprList.count == 1,
+              let expr = exprList.first?.expression.as(FunctionCallExprSyntax.self)
+        else {
+            throw ObservableUserDefaultArgumentError.macroShouldOnlyContainOneArgument
+        }
+        
+        // Extract the property type and `UserDefaults` key, defaultValue, and store expressions from the argument.
+        guard let type = binding.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name,
+              let keyExpr = expr.arguments.first(where: { $0.label?.text == "key" })?.as(LabeledExprSyntax.self),
+              let defaultValueExpr = expr.arguments.first(where: { $0.label?.text == "defaultValue" })?.as(LabeledExprSyntax.self),
+              let storeExpr = expr.arguments.first(where: { $0.label?.text == "store" })?.as(LabeledExprSyntax.self),
+              let storeDeclName = storeExpr.expression.as(MemberAccessExprSyntax.self)?.declName
+        else {
+            throw ObservableUserDefaultArgumentError.unableToExtractRequiredValuesFromArgument
+        }
+        
         return [
         #"""
         get {
             access(keyPath: \.\#(pattern.identifier))
-            return UserDefaults.\#(pattern.identifier)
+            return UserDefaults.\#(storeDeclName).value(forKey: \#(keyExpr.expression)) as? \#(type) ?? \#(defaultValueExpr.expression)
         }
         """#,
         #"""
         set {
             withMutation(keyPath: \.\#(pattern.identifier)) {
-                UserDefaults.\#(pattern.identifier) = newValue
+                UserDefaults.\#(storeDeclName).set(newValue, forKey: \#(keyExpr.expression))
             }
         }
         """#
@@ -55,6 +98,7 @@ enum ObservableUserDefaultError: Error, CustomStringConvertible {
     case notVariableProperty
     case propertyMustContainOnlyOneBinding
     case propertyMustHaveNoAccessorBlock
+    case propertyMustHaveNoInitializer
     case propertyMustUseSimplePatternSyntax
     
     var description: String {
@@ -65,8 +109,24 @@ enum ObservableUserDefaultError: Error, CustomStringConvertible {
             return "'@ObservableUserDefault' cannot be applied to multiple variable bindings"
         case .propertyMustHaveNoAccessorBlock:
             return "'@ObservableUserDefault' cannot be applied to computed properties"
+        case .propertyMustHaveNoInitializer:
+            return "'@ObservableUserDefault' cannot be applied to stored properties"
         case .propertyMustUseSimplePatternSyntax:
             return "'@ObservableUserDefault' can only be applied to a variables using simple declaration syntax, for example, 'var name: String'"
+        }
+    }
+}
+
+enum ObservableUserDefaultArgumentError: Error, CustomStringConvertible {
+    case macroShouldOnlyContainOneArgument
+    case unableToExtractRequiredValuesFromArgument
+    
+    var description: String {
+        switch self {
+        case .macroShouldOnlyContainOneArgument:
+            return "'@ObservableUserDefault' should only contain one argument"
+        case .unableToExtractRequiredValuesFromArgument:
+            return "'@ObservableUserDefault' unable to extract the required values from the argument"
         }
     }
 }
