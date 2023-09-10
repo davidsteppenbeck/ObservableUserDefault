@@ -1,6 +1,6 @@
 # ObservableUserDefault
 
-`ObservableUserDefault` is a Swift macro for properties in `@Observable` classes that provides accessor blocks with getters and setters that read and write the properties in `UserDefaults`.
+`ObservableUserDefault` is an attached Swift macro for properties in `@Observable` classes that provides accessor blocks with getters and setters that read and write the properties in `UserDefaults`.
 
 ## Usage
 
@@ -70,7 +70,7 @@ final class StorageModel {
 
 ## Installation
 
-The package can be installed using [Swift Package Manager](https://swift.org/package-manager/). To add ObservableUserDefault to your Xcode project, select *File > Add Package Dependancies...* and search for the repository URL: `https://github.com/davidsteppenbeck/ObservableUserDefault`.
+The package can be installed using [Swift Package Manager](https://swift.org/package-manager/). To add ObservableUserDefault to your Xcode project, select *File > Add Package Dependancies...* and search for the repository URL: `https://github.com/davidsteppenbeck/ObservableUserDefault.git`.
 
 ## License
 

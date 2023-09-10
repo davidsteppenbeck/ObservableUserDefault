@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 import ObservableUserDefault
 
@@ -20,3 +21,4 @@ extension UserDefaults {
     static let shared = UserDefaults(suiteName: "shared")!
     static var name: String = "John Appleseed"
 }
+*/
