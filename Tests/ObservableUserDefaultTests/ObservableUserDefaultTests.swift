@@ -17,14 +17,18 @@ final class ObservableUserDefaultTests: XCTestCase {
         #if canImport(ObservableUserDefaultMacros)
         assertMacroExpansion(
             #"""
+            @Observable
             class StorageModel {
                 @ObservableUserDefault
+                @ObservationIgnored
                 var name: String
             }
             """#,
             expandedSource:
             #"""
+            @Observable
             class StorageModel {
+                @ObservationIgnored
                 var name: String {
                     get {
                         access(keyPath: \.name)
@@ -45,18 +49,22 @@ final class ObservableUserDefaultTests: XCTestCase {
         #endif
     }
     
-    func testObservableUserDefaultWithArgument() throws {
+    func testObservableUserDefaultWithArgumentOnNonOptionalType() throws {
         #if canImport(ObservableUserDefaultMacros)
         assertMacroExpansion(
             #"""
+            @Observable
             class StorageModel {
                 @ObservableUserDefault(.init(key: "NUMBER_STORAGE_KEY", defaultValue: 1000, store: .standard))
+                @ObservationIgnored
                 var number: Int
             }
             """#,
             expandedSource:
             #"""
+            @Observable
             class StorageModel {
+                @ObservationIgnored
                 var number: Int {
                     get {
                         access(keyPath: \.number)
@@ -77,23 +85,121 @@ final class ObservableUserDefaultTests: XCTestCase {
         #endif
     }
     
+    func testObservableUserDefaultWithIncorrectArgumentOnNonOptionalType() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NUMBER_STORAGE_KEY", store: .standard))
+                @ObservationIgnored
+                var number: Int
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var number: Int
+            }
+            """#,
+            diagnostics: [
+                DiagnosticSpec(message: "'@ObservableUserDefault' arguments on non-optional types must provide default values", line: 3, column: 5)
+            ],
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithArgumentOnOptionalType() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NUMBER_STORAGE_KEY", store: .standard))
+                @ObservationIgnored
+                var number: Int?
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var number: Int? {
+                    get {
+                        access(keyPath: \.number)
+                        return UserDefaults.standard.value(forKey: "NUMBER_STORAGE_KEY") as? Int
+                    }
+                    set {
+                        withMutation(keyPath: \.number) {
+                            UserDefaults.standard.set(newValue, forKey: "NUMBER_STORAGE_KEY")
+                        }
+                    }
+                }
+            }
+            """#,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithIncorrectArgumentOnOptionalType() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NUMBER_STORAGE_KEY", defaultValue: 1000, store: .standard))
+                @ObservationIgnored
+                var number: Int?
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var number: Int?
+            }
+            """#,
+            diagnostics: [
+                DiagnosticSpec(message: "'@ObservableUserDefault' arguments on optional types should not use default values", line: 3, column: 5)
+            ],
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
     func testObservableUserDefaultWithConstant() throws {
         #if canImport(ObservableUserDefaultMacros)
         assertMacroExpansion(
             """
+            @Observable
             class StorageModel {
                 @ObservableUserDefault
+                @ObservationIgnored
                 let name: String
             }
             """,
             expandedSource:
             """
+            @Observable
             class StorageModel {
+                @ObservationIgnored
                 let name: String
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "'@ObservableUserDefault' can only be applied to variables", line: 2, column: 5)
+                DiagnosticSpec(message: "'@ObservableUserDefault' can only be applied to variables", line: 3, column: 5)
             ],
             macros: testMacros
         )
@@ -106,8 +212,10 @@ final class ObservableUserDefaultTests: XCTestCase {
         #if canImport(ObservableUserDefaultMacros)
         assertMacroExpansion(
             """
+            @Observable
             class StorageModel {
                 @ObservableUserDefault
+                @ObservationIgnored
                 var name: String {
                     return "John Appleseed"
                 }
@@ -115,7 +223,9 @@ final class ObservableUserDefaultTests: XCTestCase {
             """,
             expandedSource:
             """
+            @Observable
             class StorageModel {
+                @ObservationIgnored
                 var name: String {
                     return "John Appleseed"
                 }
@@ -135,19 +245,23 @@ final class ObservableUserDefaultTests: XCTestCase {
         #if canImport(ObservableUserDefaultMacros)
         assertMacroExpansion(
             """
+            @Observable
             class StorageModel {
                 @ObservableUserDefault
+                @ObservationIgnored
                 var name: String = "John Appleseed"
             }
             """,
             expandedSource:
             """
+            @Observable
             class StorageModel {
+                @ObservationIgnored
                 var name: String = "John Appleseed"
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "'@ObservableUserDefault' cannot be applied to stored properties", line: 2, column: 5)
+                DiagnosticSpec(message: "'@ObservableUserDefault' cannot be applied to stored properties", line: 3, column: 5)
             ],
             macros: testMacros
         )

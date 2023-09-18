@@ -33,7 +33,7 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
         
         // For simple variable declarations, the binding pattern is `IdentifierPatternSyntax`,
         // which defines the name of a single variable.
-        guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+        guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier else {
             throw ObservableUserDefaultError.propertyMustUseSimplePatternSyntax
         }
         
@@ -44,14 +44,14 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
             return [
             #"""
             get {
-                access(keyPath: \.\#(pattern.identifier))
-                return UserDefaults.\#(pattern.identifier)
+                access(keyPath: \.\#(pattern))
+                return UserDefaults.\#(pattern)
             }
             """#,
             #"""
             set {
-                withMutation(keyPath: \.\#(pattern.identifier)) {
-                    UserDefaults.\#(pattern.identifier) = newValue
+                withMutation(keyPath: \.\#(pattern)) {
+                    UserDefaults.\#(pattern) = newValue
                 }
             }
             """#
@@ -65,31 +65,71 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
             throw ObservableUserDefaultArgumentError.macroShouldOnlyContainOneArgument
         }
         
-        // Extract the property type and `UserDefaults` key, defaultValue, and store expressions from the argument.
-        guard let type = binding.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name,
-              let keyExpr = expr.arguments.first(where: { $0.label?.text == "key" })?.as(LabeledExprSyntax.self),
-              let defaultValueExpr = expr.arguments.first(where: { $0.label?.text == "defaultValue" })?.as(LabeledExprSyntax.self),
-              let storeExpr = expr.arguments.first(where: { $0.label?.text == "store" })?.as(LabeledExprSyntax.self),
-              let storeDeclName = storeExpr.expression.as(MemberAccessExprSyntax.self)?.declName
-        else {
-            throw ObservableUserDefaultArgumentError.unableToExtractRequiredValuesFromArgument
+        func keyExpr() -> ExprSyntax? {
+            expr.arguments.first(where: { $0.label?.text == "key" })?.as(LabeledExprSyntax.self)?.expression
         }
         
-        return [
-        #"""
-        get {
-            access(keyPath: \.\#(pattern.identifier))
-            return UserDefaults.\#(storeDeclName).value(forKey: \#(keyExpr.expression)) as? \#(type) ?? \#(defaultValueExpr.expression)
+        func defaultValueExpr() -> ExprSyntax? {
+            expr.arguments.first(where: { $0.label?.text == "defaultValue" })?.as(LabeledExprSyntax.self)?.expression
         }
-        """#,
-        #"""
-        set {
-            withMutation(keyPath: \.\#(pattern.identifier)) {
-                UserDefaults.\#(storeDeclName).set(newValue, forKey: \#(keyExpr.expression))
+        
+        func storeExprDeclName() -> DeclReferenceExprSyntax? {
+            expr.arguments.first(where: { $0.label?.text == "store" })?.as(LabeledExprSyntax.self)?.expression.as(MemberAccessExprSyntax.self)?.declName
+        }
+        
+        if let type = binding.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name,
+           let keyExpr = keyExpr(),
+           let storeName = storeExprDeclName() {
+            
+            guard let defaultValueExpr = defaultValueExpr() else {
+                throw ObservableUserDefaultArgumentError.nonOptionalTypeMustHaveDefaultValue
             }
+            
+            // Macro is attached to a non-optional type with an argument that contains a default value.
+            return [
+            #"""
+            get {
+                access(keyPath: \.\#(pattern))
+                return UserDefaults.\#(storeName).value(forKey: \#(keyExpr)) as? \#(type) ?? \#(defaultValueExpr)
+            }
+            """#,
+            #"""
+            set {
+                withMutation(keyPath: \.\#(pattern)) {
+                    UserDefaults.\#(storeName).set(newValue, forKey: \#(keyExpr))
+                }
+            }
+            """#
+            ]
+            
+        } else if let type = binding.typeAnnotation?.type.as(OptionalTypeSyntax.self)?.wrappedType.as(IdentifierTypeSyntax.self)?.name,
+                  let keyExpr = keyExpr(),
+                  let storeName = storeExprDeclName() {
+            
+            guard defaultValueExpr() == nil else {
+                throw ObservableUserDefaultArgumentError.optionalTypeShouldHaveNoDefaultValue
+            }
+            
+            // Macro is attached to an optional type with an argument that contains no default value.
+            return [
+            #"""
+            get {
+                access(keyPath: \.\#(pattern))
+                return UserDefaults.\#(storeName).value(forKey: \#(keyExpr)) as? \#(type)
+            }
+            """#,
+            #"""
+            set {
+                withMutation(keyPath: \.\#(pattern)) {
+                    UserDefaults.\#(storeName).set(newValue, forKey: \#(keyExpr))
+                }
+            }
+            """#
+            ]
+            
+        } else {
+            throw ObservableUserDefaultArgumentError.unableToExtractRequiredValuesFromArgument
         }
-        """#
-        ]
     }
     
 }
@@ -119,12 +159,18 @@ enum ObservableUserDefaultError: Error, CustomStringConvertible {
 
 enum ObservableUserDefaultArgumentError: Error, CustomStringConvertible {
     case macroShouldOnlyContainOneArgument
+    case nonOptionalTypeMustHaveDefaultValue
+    case optionalTypeShouldHaveNoDefaultValue
     case unableToExtractRequiredValuesFromArgument
     
     var description: String {
         switch self {
         case .macroShouldOnlyContainOneArgument:
-            return "'@ObservableUserDefault' should only contain one argument"
+            return "Must provide an argument when using '@ObservableUserDefault' with parentheses"
+        case .nonOptionalTypeMustHaveDefaultValue:
+            return "'@ObservableUserDefault' arguments on non-optional types must provide default values"
+        case .optionalTypeShouldHaveNoDefaultValue:
+            return "'@ObservableUserDefault' arguments on optional types should not use default values"
         case .unableToExtractRequiredValuesFromArgument:
             return "'@ObservableUserDefault' unable to extract the required values from the argument"
         }

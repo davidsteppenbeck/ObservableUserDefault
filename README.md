@@ -22,6 +22,7 @@ This will automatically generate the following code:
 ```swift
 @Observable
 final class StorageModel {
+    @ObservationIgnored
     var name: String {
         get {
             access(keyPath: \.name)
@@ -36,7 +37,8 @@ final class StorageModel {
 }
 ```
 
-An argument can also be provided to the macro for cases when you want to provide the `UserDefaults` storage key, default value, and suite explicitly.
+Arguments can be provided to the macro for cases when you want to provide `UserDefaults` storage keys, default values, and suites explicitly.
+When attached to non-optional types, default values must be included in the arguments.
 
 ```swift
 import ObservableUserDefault
@@ -54,10 +56,44 @@ This will automatically generate the following code:
 ```swift
 @Observable
 final class StorageModel {
+    @ObservationIgnored
     var name: String {
         get {
             access(keyPath: \.name)
             return UserDefaults.standard.value(forKey: "NAME_STORAGE_KEY") as? String ?? "John Appleseed"
+        }
+        set {
+            withMutation(keyPath: \.name) {
+                UserDefaults.standard.set(newValue, forKey: "NAME_STORAGE_KEY")
+            }
+        }
+    }
+}
+```
+
+When attached to optional types, omit the default value from the argument.
+
+```swift
+import ObservableUserDefault
+
+@Observable
+final class StorageModel {
+    @ObservableUserDefault(.init(key: "NAME_STORAGE_KEY", store: .standard))
+    @ObservationIgnored
+    var name: String?
+}
+```
+
+This will automatically generate the following code:
+
+```swift
+@Observable
+final class StorageModel {
+    @ObservationIgnored
+    var name: String? {
+        get {
+            access(keyPath: \.name)
+            return UserDefaults.standard.value(forKey: "NAME_STORAGE_KEY") as? String
         }
         set {
             withMutation(keyPath: \.name) {
