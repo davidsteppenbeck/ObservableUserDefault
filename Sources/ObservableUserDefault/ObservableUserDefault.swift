@@ -62,7 +62,7 @@ import Foundation
 ///
 /// Note that the `@ObservationIgnored` annotation is necessary when using `@ObservableUserDefault` owing to the way that `@Observable` works:
 /// Without it, the `@Observable` macro will inject its own getters and setters in the accessor block and the macros will conflict, causing errors.
-@attached(accessor)
+@attached(accessor, names: named(get), named(set))
 public macro ObservableUserDefault<DefaultValue>(_ metadata: ObservableUserDefaultMetadata<DefaultValue>? = Optional<ObservableUserDefaultMetadata<Any>>.none) = #externalMacro(
     module: "ObservableUserDefaultMacros",
     type: "ObservableUserDefaultMacro"

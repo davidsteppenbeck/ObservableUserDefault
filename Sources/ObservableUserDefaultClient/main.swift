@@ -4,6 +4,7 @@ import ObservableUserDefault
 
 @Observable
 class Person {
+    
     @ObservableUserDefault
     @ObservationIgnored
     var name: String
@@ -15,10 +16,11 @@ class Person {
     @ObservableUserDefault(.init(key: "NUMBER_STORAGE_KEY", defaultValue: Int.zero, store: .shared))
     @ObservationIgnored
     var number: Int
+    
 }
 
 extension UserDefaults {
-    static let shared = UserDefaults(suiteName: "shared")!
+    static let shared = UserDefaults(suiteName: "shared_suite_example")!
     static var name: String = "John Appleseed"
 }
 */
