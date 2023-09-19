@@ -1,9 +1,8 @@
-/*
 import SwiftUI
 import ObservableUserDefault
 
-@Observable
-class Person {
+@available(macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0, macCatalyst 17.0, visionOS 1.0, *)
+@Observable final class Person {
     
     // Use without arguments to access static properties, for example, `UserDefaults.name`.
     @ObservableUserDefault
@@ -31,4 +30,3 @@ extension UserDefaults {
     static let shared = UserDefaults(suiteName: "SHARED_SUITE_EXAMPLE")!
     static var name: String = "John Appleseed"
 }
-*/
