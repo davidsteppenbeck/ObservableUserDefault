@@ -75,20 +75,18 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
             expr.arguments.first(where: { $0.label?.text == "store" })?.as(LabeledExprSyntax.self)?.expression.as(MemberAccessExprSyntax.self)?.declName
         }
         
-        if let type = binding.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name,
-           let keyExpr = keyExpr(),
-           let storeName = storeExprDeclName() {
+        if let type = binding.typeAnnotation?.type.as(OptionalTypeSyntax.self), let keyExpr = keyExpr(), let storeName = storeExprDeclName() {
             
-            guard let defaultValueExpr = defaultValueExpr() else {
-                throw ObservableUserDefaultArgumentError.nonOptionalTypeMustHaveDefaultValue
+            guard defaultValueExpr() == nil else {
+                throw ObservableUserDefaultArgumentError.optionalTypeShouldHaveNoDefaultValue
             }
             
-            // Macro is attached to a non-optional type with an argument that contains a default value.
+            // Macro is attached to an optional type with an argument that contains no default value.
             return [
             #"""
             get {
                 access(keyPath: \.\#(pattern))
-                return UserDefaults.\#(storeName).value(forKey: \#(keyExpr)) as? \#(type) ?? \#(defaultValueExpr)
+                return UserDefaults.\#(storeName).value(forKey: \#(keyExpr)) as? \#(type.wrappedType)
             }
             """#,
             #"""
@@ -100,20 +98,18 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
             """#
             ]
             
-        } else if let type = binding.typeAnnotation?.type.as(OptionalTypeSyntax.self)?.wrappedType.as(IdentifierTypeSyntax.self)?.name,
-                  let keyExpr = keyExpr(),
-                  let storeName = storeExprDeclName() {
+        } else if let type = binding.typeAnnotation?.type, let keyExpr = keyExpr(), let storeName = storeExprDeclName() {
             
-            guard defaultValueExpr() == nil else {
-                throw ObservableUserDefaultArgumentError.optionalTypeShouldHaveNoDefaultValue
+            guard let defaultValueExpr = defaultValueExpr() else {
+                throw ObservableUserDefaultArgumentError.nonOptionalTypeMustHaveDefaultValue
             }
             
-            // Macro is attached to an optional type with an argument that contains no default value.
+            // Macro is attached to a non-optional type with an argument that contains a default value.
             return [
             #"""
             get {
                 access(keyPath: \.\#(pattern))
-                return UserDefaults.\#(storeName).value(forKey: \#(keyExpr)) as? \#(type)
+                return UserDefaults.\#(storeName).value(forKey: \#(keyExpr)) as? \#(type) ?? \#(defaultValueExpr)
             }
             """#,
             #"""

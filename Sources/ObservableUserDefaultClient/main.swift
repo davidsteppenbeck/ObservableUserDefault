@@ -24,6 +24,20 @@ import ObservableUserDefault
     @ObservationIgnored
     var date: Date?
     
+    // Use arguments containing default values when attached to non-optional arrays.
+    @ObservableUserDefault(.init(key: "NAMES_STORAGE_KEY_EXAMPLE", defaultValue: ["Tim", "Craig"], store: .shared))
+    @ObservationIgnored
+    var names: [String]
+    
+    // Use arguments containing no default values when attached to optional arrays.
+    @ObservableUserDefault(.init(key: "DATES_STORAGE_KEY_EXAMPLE", store: .standard))
+    @ObservationIgnored
+    var dates: [Date]?
+    
+    @ObservableUserDefault(.init(key: "DICT_STORAGE_KEY_EXAMPLE", defaultValue: ["Tim": 0941], store: .shared))
+    @ObservationIgnored
+    var dict: [String: Int]
+    
 }
 
 fileprivate extension UserDefaults {

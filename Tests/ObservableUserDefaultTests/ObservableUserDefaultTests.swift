@@ -270,4 +270,134 @@ final class ObservableUserDefaultTests: XCTestCase {
         #endif
     }
     
+    func testObservableUserDefaultWithArgumentOnNonOptionalArray() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NAMES_STORAGE_KEY", defaultValue: ["Tim", "Craig"], store: .standard))
+                @ObservationIgnored
+                var names: [String]
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var names: [String] {
+                    get {
+                        access(keyPath: \.names)
+                        return UserDefaults.standard.value(forKey: "NAMES_STORAGE_KEY") as? [String] ?? ["Tim", "Craig"]
+                    }
+                    set {
+                        withMutation(keyPath: \.names) {
+                            UserDefaults.standard.set(newValue, forKey: "NAMES_STORAGE_KEY")
+                        }
+                    }
+                }
+            }
+            """#,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithIncorrectArgumentOnNonOptionalArray() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NAMES_STORAGE_KEY", store: .standard))
+                @ObservationIgnored
+                var names: [String]
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var names: [String]
+            }
+            """#,
+            diagnostics: [
+                DiagnosticSpec(message: "'@ObservableUserDefault' arguments on non-optional types must provide default values", line: 3, column: 5)
+            ],
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithArgumentOnOptionalArray() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NAMES_STORAGE_KEY", store: .standard))
+                @ObservationIgnored
+                var names: [String]?
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var names: [String]? {
+                    get {
+                        access(keyPath: \.names)
+                        return UserDefaults.standard.value(forKey: "NAMES_STORAGE_KEY") as? [String]
+                    }
+                    set {
+                        withMutation(keyPath: \.names) {
+                            UserDefaults.standard.set(newValue, forKey: "NAMES_STORAGE_KEY")
+                        }
+                    }
+                }
+            }
+            """#,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
+    func testObservableUserDefaultWithIncorrectArgumentOnOptionalArray() throws {
+        #if canImport(ObservableUserDefaultMacros)
+        assertMacroExpansion(
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservableUserDefault(.init(key: "NAMES_STORAGE_KEY", defaultValue: ["Tim", "Craig"], store: .standard))
+                @ObservationIgnored
+                var names: [String]?
+            }
+            """#,
+            expandedSource:
+            #"""
+            @Observable
+            class StorageModel {
+                @ObservationIgnored
+                var names: [String]?
+            }
+            """#,
+            diagnostics: [
+                DiagnosticSpec(message: "'@ObservableUserDefault' arguments on optional types should not use default values", line: 3, column: 5)
+            ],
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+    
 }
