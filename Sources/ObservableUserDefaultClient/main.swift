@@ -26,7 +26,7 @@ import ObservableUserDefault
     
 }
 
-extension UserDefaults {
+fileprivate extension UserDefaults {
     static let shared = UserDefaults(suiteName: "SHARED_SUITE_EXAMPLE")!
     static var name: String = "John Appleseed"
 }

@@ -11,7 +11,7 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
         in context: some MacroExpansionContext
     ) throws -> [AccessorDeclSyntax] {
         // Ensure the macro can only be attached to variable properties.
-        guard let varDecl = declaration.as(VariableDeclSyntax.self), varDecl.bindingSpecifier.text == "var" else {
+        guard let varDecl = declaration.as(VariableDeclSyntax.self), varDecl.bindingSpecifier.tokenKind == .keyword(.var) else {
             throw ObservableUserDefaultError.notVariableProperty
         }
         
@@ -59,9 +59,7 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
         }
         
         // Ensure the macro has one and only one argument.
-        guard let exprList = arguments.as(LabeledExprListSyntax.self), exprList.count == 1,
-              let expr = exprList.first?.expression.as(FunctionCallExprSyntax.self)
-        else {
+        guard let exprList = arguments.as(LabeledExprListSyntax.self), exprList.count == 1, let expr = exprList.first?.expression.as(FunctionCallExprSyntax.self) else {
             throw ObservableUserDefaultArgumentError.macroShouldOnlyContainOneArgument
         }
         
