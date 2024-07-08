@@ -64,15 +64,15 @@ public struct ObservableUserDefaultMacro: AccessorMacro {
         }
         
         func keyExpr() -> ExprSyntax? {
-            expr.arguments.first(where: { $0.label?.text == "key" })?.as(LabeledExprSyntax.self)?.expression
+            expr.arguments.first(where: { $0.label?.text == "key" })?.expression
         }
         
         func defaultValueExpr() -> ExprSyntax? {
-            expr.arguments.first(where: { $0.label?.text == "defaultValue" })?.as(LabeledExprSyntax.self)?.expression
+            expr.arguments.first(where: { $0.label?.text == "defaultValue" })?.expression
         }
         
         func storeExprDeclName() -> DeclReferenceExprSyntax? {
-            expr.arguments.first(where: { $0.label?.text == "store" })?.as(LabeledExprSyntax.self)?.expression.as(MemberAccessExprSyntax.self)?.declName
+            expr.arguments.first(where: { $0.label?.text == "store" })?.expression.as(MemberAccessExprSyntax.self)?.declName
         }
         
         if let type = binding.typeAnnotation?.type.as(OptionalTypeSyntax.self), let keyExpr = keyExpr(), let storeName = storeExprDeclName() {
